@@ -5,11 +5,20 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
 import time
 
-# Set up the SQLite engine and create a connection
+# Set page configuration
+st.set_page_config(page_title="Security Monitor", layout="wide", initial_sidebar_state="collapsed")
+
+# Custom CSS
+def local_css(file_name):
+    with open(file_name, "r") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+local_css("style.css")
+
+# Database setup (same as before)
 engine = create_engine('sqlite:///users.db')
 meta = MetaData()
 
-# Define the users table
 users = Table(
     'users', meta,
     Column('id', Integer, primary_key=True),
@@ -17,14 +26,11 @@ users = Table(
     Column('password', String)
 )
 
-# Create the table if not exists
 meta.create_all(engine)
-
-# Set up session for database interaction
 Session = sessionmaker(bind=engine)
 session = Session()
 
-# Function to add a new user to the database
+# User management functions (same as before)
 def add_user(username, password):
     try:
         insert = users.insert().values(username=username, password=password)
@@ -32,128 +38,188 @@ def add_user(username, password):
         session.commit()
         return True
     except IntegrityError:
-        session.rollback()  # Rollback in case of error
+        session.rollback()
         return False
 
-# Function to authenticate the user
 def authenticate(username, password):
     query = users.select().where(users.c.username == username).where(users.c.password == password)
     result = session.execute(query).fetchone()
     return result is not None
 
+# Updated sidebar for navigation
+def sidebar():
+    with st.sidebar:
+        st.markdown("<h2 style='text-align: center; color: white;'>Navigation</h2>", unsafe_allow_html=True)
+        if st.button("Home", key="nav_home"):
+            st.session_state['page'] = 'home'
+        if st.button("Live Feed", key="nav_live"):
+            st.session_state['page'] = 'live'
+        if st.button("Real-Time Analysis", key="nav_realtime"):
+            st.session_state['page'] = 'realtime'
+        if st.button("Detect Vandalism", key="nav_detect"):
+            st.session_state['page'] = 'detect'
+        if st.button("Logout", key="nav_logout"):
+            st.session_state['logged_in'] = False
+            st.session_state['page'] = 'login'
+            st.rerun()
+
 # Login Page
 def login():
-    st.title("Login Page")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    
-    if st.button("Login"):
-        if authenticate(username, password):
-            st.success(f"Welcome, {username}!")
-            st.session_state['page'] = 'home'
-        else:
-            st.error("Invalid credentials")
+    st.markdown("<h1 style='text-align: center; color: white;'>Vindhler</h1>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        
+        if st.button("Login", key="login"):
+            if authenticate(username, password):
+                st.success(f"Welcome, {username}!")
+                st.session_state['logged_in'] = True
+                st.session_state['username'] = username
+                st.session_state['page'] = 'home'
+                st.rerun()
+            else:
+                st.error("Invalid credentials")
 
-    # Add a button to redirect to the registration page
-    if st.button("Register"):
-        st.session_state['page'] = 'register'
+        st.markdown("<hr>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center;'>Don't have an account?</p>", unsafe_allow_html=True)
+        if st.button("Register", key="goto_register"):
+            st.session_state['page'] = 'register'
+            st.rerun()
 
 # Register Page
 def register():
-    st.title("Register Page")
-    new_username = st.text_input("New Username")
-    new_password = st.text_input("New Password", type="password")
-    
-    if st.button("Register"):
-        if add_user(new_username, new_password):
-            st.success("User registered successfully!")
+    st.markdown("<h1 style='text-align: center; color: white;'>Create an Account</h1>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        new_username = st.text_input("New Username")
+        new_password = st.text_input("New Password", type="password")
+        
+        if st.button("Register", key="register"):
+            if add_user(new_username, new_password):
+                st.success("User registered successfully!")
+                st.session_state['page'] = 'login'
+                st.rerun()
+            else:
+                st.error("Username already exists. Please choose another.")
+
+        st.markdown("<hr>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center;'>Already have an account?</p>", unsafe_allow_html=True)
+        if st.button("Back to Login", key="goto_login"):
             st.session_state['page'] = 'login'
-        else:
-            st.error("Username already exists. Please choose another.")
+            st.rerun()
 
-    # Add a button to redirect to the login page
-    if st.button("Back to Login"):
-        st.session_state['page'] = 'login'
-
-# Home Page after successful login
+# Home Page
 def home():
-    st.title("Home Page")
-    st.write("Choose an option:")
+    st.markdown("<h1 style='text-align: center; color: white;'>Security Monitor Dashboard</h1>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='text-align: center; color: grey;'>Welcome, {st.session_state['username']}!</h3>", unsafe_allow_html=True)
     
-    if st.button("Go to Live Feed"):
-        st.session_state['page'] = 'live'
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown("<h3 style='color: grey;'>Live Feed</h3>", unsafe_allow_html=True)
+        st.image("https://via.placeholder.com/300x200.png?text=Live+Feed+Preview", use_column_width=True)
+        if st.button("Go to Live Feed"):
+            st.session_state['page'] = 'live'
+            st.rerun()
+    
+    with col2:
+        st.markdown("<h3 style='color: grey;'>Real-Time Analysis</h3>", unsafe_allow_html=True)
+        st.image("https://via.placeholder.com/300x200.png?text=Analysis+Preview", use_column_width=True)
+        if st.button("Go to Real-Time Analysis"):
+            st.session_state['page'] = 'realtime'
+            st.rerun()
+    
+    with col3:
+        st.markdown("<h3 style='color: grey;'>Vandalism Detection</h3>", unsafe_allow_html=True)
+        st.image("https://via.placeholder.com/300x200.png?text=Detection+Preview", use_column_width=True)
+        if st.button("Go to Detect Vandalism"):
+            st.session_state['page'] = 'detect'
+            st.rerun()
 
-    if st.button("Go to Real-Time Page"):
-        st.session_state['page'] = 'realtime'
-
-    if st.button("Go to Detect Page"):
-        st.session_state['page'] = 'detect'
-
-# Pages for after login
+# Live Feed Page
 def live():
-    st.title("Live Page")
-    st.write("This is the live feed page.")
+    st.markdown("<h1 style='text-align: center; color: white;'>Live Security Feed</h1>", unsafe_allow_html=True)
     
-    if st.button("Start Video Stream"):
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        stframe = st.empty()
+    with col2:
+        st.markdown("<h3 style='color: grey;'>Controls</h3>", unsafe_allow_html=True)
+        start_button = st.button("Start Stream")
+        stop_button = st.button("Stop Stream")
+    
+    if start_button:
         st.session_state.streaming = True
-        video_capture()
-
-    if st.button("Stop Video Stream"):
+        video_capture(stframe)
+    
+    if stop_button:
         st.session_state.streaming = False
-        st.session_state['page'] = 'home'
 
-    if st.button("Back to Home"):
-        st.session_state['page'] = 'home'
-
-def video_capture():
-    stframe = st.empty()  # Placeholder to display video frames
-
-    # VideoCapture from default webcam or IP Camera URL
+def video_capture(stframe):
     cap = cv2.VideoCapture(0)  # Change 0 to IP stream URL if needed
     while cap.isOpened() and st.session_state.streaming:
         ret, frame = cap.read()
         if not ret:
             st.write("Failed to capture video frame.")
             break
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB
-        stframe.image(frame, channels="RGB")  # Display the frame in the Streamlit app
-        
-        # Add a delay between frames for smoother playback (adjust as needed)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        stframe.image(frame, channels="RGB", use_column_width=True)
         time.sleep(0.03)
-
     cap.release()
 
+# Real-Time Analysis Page
 def realtime():
-    st.title("Real-Time Page")
-    st.write("This is the real-time processing page.")
+    st.markdown("<h1 style='text-align: center; color: white;'>Real-Time Security Analysis</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: grey;'>This page contains real-time analytics and data visualization of security metrics.</p>", unsafe_allow_html=True)
     
-    if st.button("Back to Home"):
-        st.session_state['page'] = 'home'
+    # Placeholder for real-time charts
+    chart_data = [
+        {"metric": "Motion Detected", "value": 15},
+        {"metric": "Suspicious Activity", "value": 3},
+        {"metric": "System Health", "value": 98},
+    ]
+    
+    col1, col2, col3 = st.columns(3)
+    for i, data in enumerate(chart_data):
+        with [col1, col2, col3][i]:
+            st.metric(label=data["metric"], value=data["value"])
 
+# Detect Vandalism Page
 def detect():
-    st.title("Detect Page")
-    st.write("Detection in progress...")
-    st.write("If vandalism is detected, a prompt will appear here.")
+    st.markdown("<h1 style='text-align: center; color: white;'>Vandalism Detection</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: grey;'>This page contains the vandalism detection interface and results.</p>", unsafe_allow_html=True)
     
-    if st.button("Back to Home"):
-        st.session_state['page'] = 'home'
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.image("https://via.placeholder.com/600x400.png?text=Vandalism+Detection+Feed", use_column_width=True)
+    with col2:
+        st.markdown("<h3 style='color: grey;'>Detection Log</h3>", unsafe_allow_html=True)
+        st.text("10:15 AM - No vandalism detected")
+        st.text("10:30 AM - Suspicious activity observed")
+        st.text("10:45 AM - Area clear")
 
-# Initialize session state
-if 'page' not in st.session_state:
-    st.session_state['page'] = 'login'
-if 'streaming' not in st.session_state:
-    st.session_state.streaming = False
+# Main app logic
+def main():
+    if 'logged_in' not in st.session_state:
+        st.session_state['logged_in'] = False
+    if 'page' not in st.session_state:
+        st.session_state['page'] = 'login'
+    
+    if not st.session_state['logged_in']:
+        if st.session_state['page'] == 'login':
+            login()
+        elif st.session_state['page'] == 'register':
+            register()
+    else:
+        sidebar()
+        if st.session_state['page'] == 'home':
+            home()
+        elif st.session_state['page'] == 'live':
+            live()
+        elif st.session_state['page'] == 'realtime':
+            realtime()
+        elif st.session_state['page'] == 'detect':
+            detect()
 
-# Page routing
-if st.session_state['page'] == 'login':
-    login()
-elif st.session_state['page'] == 'register':
-    register()
-elif st.session_state['page'] == 'home':
-    home()
-elif st.session_state['page'] == 'live':
-    live()
-elif st.session_state['page'] == 'realtime':
-    realtime()
-elif st.session_state['page'] == 'detect':
-    detect()
+if __name__ == "__main__":
+    main()
