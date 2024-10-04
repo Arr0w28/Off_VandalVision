@@ -10,7 +10,7 @@ model_path = 'models/RRDB_PSNR_x4.pth'  # You can use ESRGAN model or PSNR model
 device = torch.device('cpu')  # Ensure that you're using CPU as no CUDA support on M1
 
 # Path to the image folder
-test_img_folder = 'LR/Normalised-CCTV-face-images-2_rlt.png'  # Adjust path if necessary
+test_img_folder = 'LR/comic.png'  # Adjust path if necessary
 
 # Initialize the model architecture
 model = arch.RRDBNet(3, 3, 64, 23, gc=32)
