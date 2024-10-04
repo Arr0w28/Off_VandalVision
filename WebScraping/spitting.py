@@ -78,5 +78,32 @@ def download_images(search_term, num_images=10):
 
     print(f"Downloaded {downloaded_count} images.")
 
-if __name__ == "__main__":
-    download_images("mouth water fight spit", num_images=50)  # Change num_images as needed
+if _name_ == "_main_":
+    spit = ["Human spitting behavior",
+    "Humans spitting on the ground",
+    "Human spit fight",
+    "Humans spitting in public",
+    "Human tobacco spitting",
+    "Human spitting during confrontation",
+    "Humans spitting in sports",
+    "Human spitting match",
+    "Human spitting incident",
+    "Humans spitting at each other",
+    "Humans spitting during arguments",
+    "Human spitting scandal",
+    "Human spitting on the street",
+    "Human spitting insult",
+    "Humans spitting for distance",
+    "mouth water fight spit",
+    "football spit",
+    "human paan spit",
+    "human spit",
+    "mouth water fight spit",
+    "spit football",
+    "spit sneeze",
+    "spitting on road",
+    "spitting",
+    "sspitting water",
+    "water spit"]
+    for i in spit:
+        download_images(i, num_images=20)  # Change num_images as needed
