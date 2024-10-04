@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 1
+names: ['spit']
+
+roboflow:
+  workspace: shreyash-patel-jqvs2
+  project: spit-detection-nlkqi-s689u
+  version: 3
+  license: Public Domain
+  url: https://universe.roboflow.com/shreyash-patel-jqvs2/spit-detection-nlkqi-s689u/dataset/3
