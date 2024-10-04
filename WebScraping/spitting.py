@@ -104,6 +104,9 @@ if _name_ == "_main_":
     "spitting on road",
     "spitting",
     "sspitting water",
-    "water spit"]
+    "water spit",
+    "spit on roadside india",
+    "spit at monument india",
+    "spit in trains"]
     for i in spit:
         download_images(i, num_images=20)  # Change num_images as needed
