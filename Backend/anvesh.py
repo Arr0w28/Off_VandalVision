@@ -1,5 +1,3 @@
-# Server B: Process video stream from Server A and perform inference
-
 import cv2
 import torch
 import requests
@@ -9,7 +7,7 @@ from flask import Flask, Response
 from torchvision import transforms
 from io import BytesIO
 
-# Define your model architecture (make sure it matches the training architecture)
+# Define your model architecture
 class SimpleNet(torch.nn.Module):
     def __init__(self):
         super(SimpleNet, self).__init__()
@@ -45,6 +43,17 @@ app = Flask(__name__)
 
 # URL of the stream from Server A
 stream_url = 'http://localhost:5000/video_feed'
+# URL of the server to send processed frames
+destination_url = 'http://localhost:5003/receive_frame'  # Change this to your desired URL
+
+def send_video_frame(frame):
+    """Send the processed video frame to another server."""
+    _, buffer = cv2.imencode('.jpg', frame)
+    frame_data = buffer.tobytes()
+    
+    # Send the frame as multipart/form-data
+    response = requests.post(destination_url, files={'file': ('frame.jpg', frame_data, 'image/jpeg')})
+    return response
 
 @app.route('/process_video')
 def process_video():
@@ -81,7 +90,11 @@ def process_video():
                 label_text = f'Class: {label}'
                 cv2.putText(frame, label_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
-                # Encode the frame back to JPEG
+                # Check if the predicted class is 'spit' (assuming class index 0 corresponds to 'spit')
+                if label == 0:  # Replace with the correct index for 'spit'
+                    send_video_frame(frame)  # Send the frame for further processing
+
+                # Encode the frame back to JPEG for streaming
                 ret, buffer = cv2.imencode('.jpg', frame)
                 frame = buffer.tobytes()
 

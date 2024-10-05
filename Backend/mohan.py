@@ -3,9 +3,10 @@ import torch
 import numpy as np
 import cv2
 import RRDBNet_arch as arch
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from io import BytesIO
 from PIL import Image
+import requests
 
 app = Flask(__name__)
 
@@ -43,6 +44,16 @@ def super_resolve_image(image):
 
     return output
 
+def send_frame(frame):
+    """Send the processed frame to another server."""
+    _, buffer = cv2.imencode('.jpg', frame)
+    frame_data = buffer.tobytes()
+    
+    # Send the frame as multipart/form-data
+    destination_url = 'http://localhost:5003/receive_frame'  # Change this to your desired URL
+    response = requests.post(destination_url, files={'file': ('frame.jpg', frame_data, 'image/jpeg')})
+    return response
+
 @app.route('/upload', methods=['POST'])
 def upload_image():
     if 'file' not in request.files:
@@ -62,6 +73,25 @@ def upload_image():
     print(f'Saved result to {result_path}')
 
     return jsonify({"message": f"Image processed and saved to {result_path}"}), 200
+
+@app.route('/process_video', methods=['POST'])
+def process_video():
+    """Process incoming video frames and send them to another server."""
+    if 'file' not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    # Read image and apply super-resolution
+    img = Image.open(BytesIO(file.read()))
+    output_img = super_resolve_image(img)
+
+    # Send the processed frame to the destination server
+    send_frame(output_img)
+
+    return jsonify({"message": "Frame processed and sent to the destination server"}), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5002)  # Running on port 5002
