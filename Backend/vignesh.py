@@ -19,7 +19,7 @@ tile_size = 128  # Adjust this based on your memory limit
 tile_overlap = 32  # Overlap to avoid seams between tiles
 
 # Streamer server details (adjust accordingly)
-streamer_url = 'http://localhost:5004/stream_video'  # Endpoint of the streamer server
+streamer_url = 'http://:5004/stream_video'  # Endpoint of the streamer server
 
 # Helper function to split image into tiles
 def split_image_into_tiles(img, tile_size, overlap):

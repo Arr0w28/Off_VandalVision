@@ -4,6 +4,71 @@ from sqlalchemy import create_engine, Column, String, Integer, MetaData, Table
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
 import time
+import torch
+import torch.nn as nn
+from torchvision import transforms
+from PIL import Image
+import streamlit as st
+import cv2
+import torch
+import numpy as np
+from PIL import Image
+from torchvision import transforms
+from collections import deque
+import datetime
+import time
+import os
+
+
+class SimpleNet(torch.nn.Module):
+    def __init__(self):
+        super(SimpleNet, self).__init__()
+        self.conv1 = torch.nn.Conv2d(3, 16, 3, padding=1)
+        self.conv2 = torch.nn.Conv2d(16, 32, 3, padding=1)
+        self.fc1 = torch.nn.Linear(32 * 56 * 56, 128)
+        self.fc2 = torch.nn.Linear(128, 3)  # 3 classes: spitting, graffiti, no graffiti
+
+    def forward(self, x):
+        x = torch.relu(self.conv1(x))
+        x = torch.max_pool2d(x, 2)
+        x = torch.relu(self.conv2(x))
+        x = torch.max_pool2d(x, 2)
+        x = x.view(x.size(0), -1)
+        x = torch.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+# Load the trained model
+model = SimpleNet()  
+model.load_state_dict(torch.load('/Users/vedanshkumar/Documents/GitHub/Off_VandalVision/Detection/classification_model.pth'))  # Load the state dict
+model.eval()  # Set the model to evaluation mode
+
+# Set up data transforms
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+])
+
+# Function to process the video frame and run model detection
+def process_video_frame(frame):
+    """Convert frame, run through the model, and return the detected label."""
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    img_pil = Image.fromarray(rgb_frame)
+    img_tensor = transform(img_pil).unsqueeze(0)
+
+    # Perform inference
+    with torch.no_grad():
+        outputs = model(img_tensor)  # Forward pass
+        outputs = outputs.squeeze()
+        outputs = outputs.flip(dims=[0])
+        predicted = torch.argmax(torch.softmax(outputs,dim=0),dim=0)  # Get the predicted class
+
+    # Return the label
+    return predicted.item()
+
+
+
 
 # Set page configuration
 st.set_page_config(page_title="Security Monitor", layout="wide", initial_sidebar_state="collapsed")
@@ -154,18 +219,68 @@ def live():
         if st.button("Stop Stream"):
             st.write("Stream stopped")
 
+frame_buffer = deque(maxlen=60)  # Buffer of 60 frames (~2 seconds at 30 FPS)
+
 def video_capture(stframe):
     cap = cv2.VideoCapture(0)  # Change 0 to IP stream URL if needed
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Video codec for saving
+    out = None  # VideoWriter object for recording
+
+    recording = False
+    buffer_end = 0  # Counter for buffer time after detection ends
+
     while cap.isOpened() and st.session_state.streaming:
         ret, frame = cap.read()
         if not ret:
             st.write("Failed to capture video frame.")
             break
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        stframe.image(frame, channels="RGB", use_column_width=True)
-        time.sleep(0.03)
-    cap.release()
 
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame_buffer.append(frame)  # Store the frame in the buffer
+
+        # Get prediction (int value)
+        preds = process_video_frame(frame)
+
+        # Map predicted label to class name
+        label_map = {0: "Spitting", 1: "Graffiti", 2: "No Graffiti"}
+        label = label_map[preds]
+
+        # Add text to frame
+        cv2.putText(frame, label, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+
+        # Display the frame in the Streamlit app
+        stframe.image(frame, channels="RGB", use_column_width=True)
+
+        # Start recording if graffiti or spit is detected
+        if label in ["Spitting", "Graffiti"]:
+            if not recording:
+                # Start recording video and include buffered frames
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                out = cv2.VideoWriter(f'detection_{timestamp}.avi', fourcc, 20.0, (frame.shape[1], frame.shape[0]))
+                
+                for buffered_frame in frame_buffer:  # Write buffered frames to the file
+                    out.write(cv2.cvtColor(buffered_frame, cv2.COLOR_RGB2BGR))
+                
+                recording = True
+                buffer_end = 0
+
+            out.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))  # Write the current frame to the video file
+
+        elif recording:
+            # Keep recording for 2 seconds after detection ends
+            if buffer_end < 60:  # 60 frames (~2 seconds)
+                out.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))  # Write frame
+                buffer_end += 1
+            else:
+                out.release()  # Stop recording
+                recording = False
+
+        time.sleep(0.03)
+
+    if recording and out:
+        out.release()  # Ensure video is saved when exiting
+
+    cap.release()
 # Real-Time Analysis Page
 def realtime():
     st.markdown("<h1 style='text-align: center; color: white;'>Real-Time Security Analysis</h1>", unsafe_allow_html=True)
