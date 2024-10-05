@@ -32,7 +32,7 @@ The following diagram illustrates the workflow of our Vandalism Detection System
 
 ## Demo Video
 
-![Demo Video](./images/demovideo.mp4)
+https://github.com/user-attachments/assets/26cb9317-c65f-43fc-b9b5-b6182c93ef67
 
 ## Installation
 
