@@ -30,6 +30,10 @@ The following diagram illustrates the workflow of our Vandalism Detection System
 ## OneDNN by Intel OneAPI Toolkit
 [OneDNN](https://github.com/oneapi-src/oneDNN) (formerly known as MKL-DNN) is a performance library designed to accelerate deep learning workloads across a variety of hardware architectures, including CPUs, GPUs, and accelerators. Leveraging the advanced capabilities of Intel's hardware, OneDNN provides optimized implementations of common deep learning operations such as convolutions, pooling, and activation functions. In our project, we utilized OneDNN for the initial detection of vandalism, benefiting from its high performance and efficiency. This allows our system to quickly process video feeds, enhancing real-time monitoring capabilities, and enabling immediate recording when suspicious activities are detected.
 
+## Demo Video
+
+![Demo Video](./images/demo-video.mp4)
+
 ## Installation
 
 ### Prerequisites
