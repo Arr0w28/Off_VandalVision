@@ -16,7 +16,7 @@ Vindhler is a comprehensive solution designed to monitor CCTV camera feeds in re
 
 The following diagram illustrates the workflow of our Vandalism Detection System:
 
-![System Workflow](./WhatsApp_Image_2024-10-05_at_05.47.37_ed50b2a7.jpg)
+![System Workflow](./images/workflow.jpg)
 
 ## Technologies Used
 
