@@ -11,7 +11,7 @@ import requests
 app = Flask(__name__)
 
 # Set the model path and device
-model_path = 'models/RRDB_PSNR_x4.pth'  # Path to your trained model
+model_path = r'C:\Users\smoha\Documents\VIT\Streamlit\Off_VandalVision\ESRGAN\models\RRDB_PSNR_x4.pth'  # Path to your trained model
 device = torch.device('cpu')  # Using CPU (adjust if needed)
 
 # Initialize and load the model
@@ -50,7 +50,7 @@ def send_frame(frame):
     frame_data = buffer.tobytes()
     
     # Send the frame as multipart/form-data
-    destination_url = 'http://localhost:5003/receive_frame'  # Change this to your desired URL
+    destination_url = 'http://172.168.71.109:5001/receive_frame'  # Change this to your desired URL
     response = requests.post(destination_url, files={'file': ('frame.jpg', frame_data, 'image/jpeg')})
     return response
 
