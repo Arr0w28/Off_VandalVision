@@ -1,28 +1,46 @@
 import os.path as osp
+import os
 import glob
 import cv2
 import numpy as np
-import torch
-import RRDBNet_arch as arch
+from ultralytics import YOLO  # YOLOv8 import
 
-# Set the model path
-model_path = 'models/RRDB_PSNR_x4.pth'  # You can use ESRGAN model or PSNR model here
-device = torch.device('cpu')  # Ensure that you're using CPU as no CUDA support on M1
+# Set the YOLOv8 model path
+yolo_model_path = 'yolov8m.pt'  # Path to your YOLOv8m model
 
 # Path to the image folder
 test_img_folder = 'LR/comic.png'  # Adjust path if necessary
 
-# Initialize the model architecture
-model = arch.RRDBNet(3, 3, 64, 23, gc=32)
+# Load YOLOv8m model
+yolo_model = YOLO(yolo_model_path)  # Load YOLOv8 model
 
-# Load model weights
-model.load_state_dict(torch.load(model_path, map_location=device), strict=True)
-model.eval()  # Set the model to evaluation mode
-model = model.to(device)  # Send the model to the device (CPU)
+# Tiling settings
+tile_size = 128  # Adjust this based on your memory limit
+tile_overlap = 32  # Overlap to avoid seams between tiles
 
-print(f'Model loaded from {model_path}. \nStarting inference...')
+# Helper function to split image into tiles
+def split_image_into_tiles(img, tile_size, overlap):
+    h, w, _ = img.shape
+    tiles = []
+    for y in range(0, h, tile_size - overlap):
+        for x in range(0, w, tile_size - overlap):
+            x_end = min(x + tile_size, w)
+            y_end = min(y + tile_size, h)
+            tile = img[y:y_end, x:x_end]
+            tiles.append((x, y, tile))
+    return tiles, h, w
 
-# Glob to match the image file pattern, adjust if needed
+# Helper function to stitch tiles back together
+def stitch_tiles(tiles, h, w, tile_size, overlap):
+    output_img = np.zeros((h, w, 3), dtype=np.float32)
+    for (x, y, tile) in tiles:
+        x_end = min(x + tile.shape[1], w)
+        y_end = min(y + tile.shape[0], h)
+        output_img[y:y_end, x:x_end] = tile
+    return output_img
+
+# Process each image
+idx = 0
 img_paths = glob.glob(test_img_folder)
 
 # Ensure the results directory exists
@@ -30,8 +48,6 @@ results_dir = 'results/'
 if not osp.exists(results_dir):
     os.makedirs(results_dir)
 
-# Process each image
-idx = 0
 for path in img_paths:
     idx += 1
     base = osp.splitext(osp.basename(path))[0]
@@ -43,22 +59,27 @@ for path in img_paths:
         print(f"Error reading image {path}")
         continue
 
-    # Normalize image to [0, 1] range
-    img = img.astype(np.float32) / 255.0
-    img = torch.from_numpy(np.transpose(img[:, :, [2, 1, 0]], (2, 0, 1))).float()  # Change color channels
+    # Split image into tiles
+    tiles, h, w = split_image_into_tiles(img, tile_size, tile_overlap)
+    processed_tiles = []
 
-    # Add batch dimension and move to device
-    img_LR = img.unsqueeze(0).to(device)
+    # Process each tile directly (No ESRGAN involved)
+    for (x, y, tile) in tiles:
+        processed_tiles.append((x, y, tile))
 
-    # Run inference
-    with torch.no_grad():
-        output = model(img_LR).squeeze(0).cpu().numpy()
+    # Stitch the tiles back together
+    output_img = stitch_tiles(processed_tiles, h, w, tile_size, tile_overlap)
 
-    # Convert back to [0, 255] and BGR order for OpenCV
-    output = np.transpose(output[[2, 1, 0], :, :], (1, 2, 0))  # Switch RGB to BGR
-    output = (output * 255.0).clip(0, 255).astype(np.uint8)  # Clip values to valid range
+    # Save the stitched image
+    result_path = osp.join(results_dir, f'{base}_stitched.png')
+    cv2.imwrite(result_path, output_img)
+    print(f'Saved stitched image to {result_path}')
 
-    # Save output image
-    result_path = osp.join(results_dir, f'{base}_rlt.png')
-    cv2.imwrite(result_path, output)
-    print(f'Saved result to {result_path}')
+    # YOLO Inference on the stitched image
+    results = yolo_model(result_path)  # Perform YOLO prediction on the stitched image
+
+    # Process YOLO results (e.g., visualize bounding boxes, or output classification results)
+    if results and len(results[0].boxes) > 0:  # Check if any boxes were detected
+        print(f"Vandalism detected in image {base}")
+    else:
+        print(f"No vandalism detected in image {base}")

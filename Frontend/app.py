@@ -13,7 +13,7 @@ def local_css(file_name):
     with open(file_name, "r") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-local_css("style.css")
+local_css("/Users/vedanshkumar/Documents/GitHub/Off_VandalVision/Frontend/style.css")
 
 # Database setup (same as before)
 engine = create_engine('sqlite:///users.db')
@@ -139,21 +139,20 @@ def home():
 # Live Feed Page
 def live():
     st.markdown("<h1 style='text-align: center; color: white;'>Live Security Feed</h1>", unsafe_allow_html=True)
-    
+
+    # Embed the Flask video feed in an iframe
+    st.markdown("""
+    <iframe src="http://localhost:5000/video_feed" width="700" height="500" frameborder="0" allowfullscreen></iframe>
+    """, unsafe_allow_html=True)
+
+    # Additional controls can be added here
     col1, col2 = st.columns([3, 1])
-    with col1:
-        stframe = st.empty()
     with col2:
         st.markdown("<h3 style='color: grey;'>Controls</h3>", unsafe_allow_html=True)
-        start_button = st.button("Start Stream")
-        stop_button = st.button("Stop Stream")
-    
-    if start_button:
-        st.session_state.streaming = True
-        video_capture(stframe)
-    
-    if stop_button:
-        st.session_state.streaming = False
+        if st.button("Start Stream"):
+            st.write("Stream started")
+        if st.button("Stop Stream"):
+            st.write("Stream stopped")
 
 def video_capture(stframe):
     cap = cv2.VideoCapture(0)  # Change 0 to IP stream URL if needed
