@@ -20,7 +20,7 @@ def generate_frames():
             # Send the frame to the Super Resolution server (Server B)
             try:
                 files = {'file': ('frame.jpg', frame_bytes, 'image/jpeg')}
-                response = requests.post('http://:5002/upload', files=files)
+                response = requests.post('http://192.168.86.115:5002/upload', files=files)
                 print("Response from Server B:", response.json())
             except Exception as e:
                 print(f"Error sending frame: {e}")
